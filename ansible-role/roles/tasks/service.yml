@@ -1,0 +1,14 @@
+- name: Add SonarQube systemd service
+  template:
+    src: sonar.service.j2
+    dest: /etc/systemd/system/sonarqube.service
+
+- name: Reload systemd daemon
+  systemd:
+    daemon_reload: yes
+
+- name: Enable and start SonarQube
+  systemd:
+    name: sonarqube
+    state: started
+    enabled: yes

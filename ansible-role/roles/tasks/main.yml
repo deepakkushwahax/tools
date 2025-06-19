@@ -1,0 +1,11 @@
+- name: Include dependencies
+  include_tasks: dependencies.yml
+
+- name: Include PostgreSQL setup
+  include_tasks: postgresql.yml
+
+- name: Include SonarQube setup
+  include_tasks: sonarqube.yml
+
+- name: Include service setup
+  include_tasks: service.yml

@@ -1,0 +1,42 @@
+- name: Remove all conflicting PostgreSQL source lines
+  shell: |
+    sed -i.bak '/apt\.postgresql\.org/d' /etc/apt/sources.list
+    find /etc/apt/sources.list.d/ -type f -name '*.list' -exec sed -i.bak '/apt\.postgresql\.org/d' {} +
+  args:
+    executable: /bin/bash
+
+- name: Ensure /etc/apt/keyrings directory exists
+  file:
+    path: /etc/apt/keyrings
+    state: directory
+    mode: '0755'
+
+- name: Download PostgreSQL GPG key to keyring
+  get_url:
+    url: https://www.postgresql.org/media/keys/ACCC4CF8.asc
+    dest: /etc/apt/keyrings/postgresql.asc
+    mode: '0644'
+
+- name: Add PostgreSQL APT repository (corrected)
+  apt_repository:
+    repo: "deb [signed-by=/etc/apt/keyrings/postgresql.asc] http://apt.postgresql.org/pub/repos/apt jammy-pgdg main"
+    filename: "pgdg"
+    state: present
+    update_cache: no
+
+- name: Update APT cache
+  apt:
+    update_cache: yes
+    force_apt_get: yes
+
+- name: Install required packages
+  apt:
+    name:
+      - unzip
+      - openjdk-17-jdk
+      - wget
+      - gnupg
+      - ca-certificates
+      - postgresql
+      - postgresql-contrib
+    state: present

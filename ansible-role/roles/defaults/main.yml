@@ -1,0 +1,9 @@
+sonarqube_version: "10.3.0.82913"
+sonarqube_user: sonarqube
+sonarqube_group: sonarqube
+sonarqube_home: /opt/sonarqube
+sonarqube_download_url: "https://binaries.sonarsource.com/Distribution/sonarqube/sonarqube-{{ sonarqube_version }}.zip"
+
+db_name: sonar
+db_user: sonar
+db_password: sonarpass

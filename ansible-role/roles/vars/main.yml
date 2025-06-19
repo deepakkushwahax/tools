@@ -1,0 +1,10 @@
+#SPDX-License-Identifier: MIT-0
+---
+# vars file for sonarQube-setup
+sonarqube_version: "10.3.0.82913"
+required_packages:
+      - openjdk-{{ jdk_version }}-jdk
+      - postgresql
+      - postgresql-contrib
+      - python3-psycopg2
+      - zip

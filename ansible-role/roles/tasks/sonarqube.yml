@@ -1,0 +1,95 @@
+- name: Ensure vm.max_map_count is set for Elasticsearch
+  ansible.builtin.copy:
+    dest: /etc/sysctl.d/99-elasticsearch.conf
+    content: "vm.max_map_count=262144\n"
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Reload sysctl settings
+  ansible.builtin.command:
+    cmd: sysctl --system
+  become: true
+
+- name: Create SonarQube group
+  ansible.builtin.group:
+    name: "{{ sonarqube_group }}"
+    state: present
+
+- name: Create SonarQube user
+  ansible.builtin.user:
+    name: "{{ sonarqube_user }}"
+    group: "{{ sonarqube_group }}"
+    shell: /bin/bash
+    create_home: no
+    system: yes
+    state: present
+
+- name: Create SonarQube directory
+  ansible.builtin.file:
+    path: "{{ sonarqube_home }}"
+    state: directory
+    owner: "{{ sonarqube_user }}"
+    group: "{{ sonarqube_group }}"
+    mode: '0755'
+
+- name: Download SonarQube
+  ansible.builtin.get_url:
+    url: "{{ sonarqube_download_url }}"
+    dest: "/tmp/sonarqube.zip"
+    mode: '0644'
+
+- name: Unzip SonarQube archive to /opt
+  ansible.builtin.unarchive:
+    src: "/tmp/sonarqube.zip"
+    dest: "/opt"
+    remote_src: yes
+
+- name: List SonarQube conf directory after unzip (debug)
+  ansible.builtin.command:
+    cmd: ls -l /opt/sonarqube-{{ sonarqube_version }}/conf
+  register: sonarqube_conf_files
+  ignore_errors: true
+
+- debug:
+    var: sonarqube_conf_files.stdout_lines
+
+- name: Move SonarQube extracted contents to desired location
+  ansible.builtin.shell: |
+    mv /opt/sonarqube-{{ sonarqube_version }}/* {{ sonarqube_home }}/
+  args:
+    removes: "/opt/sonarqube-{{ sonarqube_version }}"
+    creates: "{{ sonarqube_home }}/bin"
+
+- name: Set ownership for SonarQube directory
+  ansible.builtin.file:
+    path: "{{ sonarqube_home }}"
+    state: directory
+    recurse: yes
+    owner: "{{ sonarqube_user }}"
+    group: "{{ sonarqube_group }}"
+    mode: '0755'
+
+- name: Check if sonar.properties exists
+  ansible.builtin.stat:
+    path: "{{ sonarqube_home }}/conf/sonar.properties"
+  register: sonar_properties_file
+
+- name: Fail if sonar.properties is missing
+  ansible.builtin.fail:
+    msg: "sonar.properties file does not exist at {{ sonarqube_home }}/conf/sonar.properties"
+  when: not sonar_properties_file.stat.exists
+
+- name: Update sonar.properties with DB config
+  ansible.builtin.lineinfile:
+    path: "{{ sonarqube_home }}/conf/sonar.properties"
+    regexp: "{{ item.regexp }}"
+    line: "{{ item.line }}"
+    state: present
+    backup: yes
+  loop:
+    - { regexp: '^#?sonar.jdbc.username=', line: "sonar.jdbc.username={{ db_user }}" }
+    - { regexp: '^#?sonar.jdbc.password=', line: "sonar.jdbc.password={{ db_password }}" }
+    - { regexp: '^#?sonar.jdbc.url=', line: "sonar.jdbc.url=jdbc:postgresql://localhost/{{ db_name }}" }
+
+
